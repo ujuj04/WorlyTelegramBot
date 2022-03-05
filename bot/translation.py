@@ -13,8 +13,7 @@ def get_auth_token(key: str, url_auth: str) -> str:
         cur_token = auth.text
         return cur_token
     else:
-        print('Error - ' + str(auth.status_code))
-        return ''
+        return 'Error - ' + str(auth.status_code)
 
 
 def get_a_word_translation(cur_token: str, url_tr: str, word: str) -> str:
@@ -35,21 +34,19 @@ def get_a_word_translation(cur_token: str, url_tr: str, word: str) -> str:
             return value
         except TypeError:
             if res == 'Incoming request rate exceeded for 50000 chars per day pricing tier':
-                print('Error - Incoming request rate exceeded for 50000 chars per day pricing tier')
                 return res
             else:
                 return 'No translation available'
     else:
-        print('Error!' + str(req.status_code))
+        return 'Error!' + str(req.status_code)
 
 
-def start(words):
-    translated = []
+def start(word):
     token = get_auth_token(key=KEY, url_auth=URL_AUTH)
-    for word in words:
-        ru_translation = get_a_word_translation(cur_token=token, url_tr=URL_TRANSLATE, word=word.lower())
-        if ru_translation == 'Incoming request rate exceeded for 50000 chars per day pricing tier':
-            return 0
-        translated.append(ru_translation)
-    return translated
+    ru_translation = get_a_word_translation(cur_token=token, url_tr=URL_TRANSLATE, word=word.lower())
+    if ru_translation == 'Incoming request rate exceeded for 50000 chars per day pricing tier':
+        return 'Error: Unable to get the translation. Try again'
+    elif not ru_translation:
+        return 'Error: Unable to get the translation. Try again'
+    return ru_translation
 

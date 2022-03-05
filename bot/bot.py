@@ -1,7 +1,8 @@
 import config
 import logging
-import messaging
+import languages
 import translation
+import functional
 
 from aiogram import Bot, Dispatcher, executor, types
 
@@ -13,10 +14,8 @@ bot = Bot(token=config.TOKEN)
 dp = Dispatcher(bot)
 
 
-@dp.message_handler(commands=["tr"], commands_prefix="!/")
+@dp.message_handler(commands=["tr"])
 async def translate(message: types.Message):
-    await message.answer("(en){} --> (ru){}".format(message.text.split(' ')[1::],
-                                                    translation.start(message.text.split(' ')[1::])))
 
 
 #run long-polling
