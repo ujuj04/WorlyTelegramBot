@@ -101,31 +101,29 @@ async def create_game(message: types.Message, state: FSMContext):
         reply = False
 
         words = [right[0], wrongs[0], wrongs[1], wrongs[2]]
-        await message.answer(right[0])
+
+        right_tr = translation.start(right[0])
+
         random.shuffle(words)
-        text = '1. {}\n2. {}\n3. {}\n4. {}'.format(words[0], words[1], words[2], words[3])
+        text = 'Слово: {} \n\t1. {}\n\t2. {}\n\t3. {}\n\t4. {}'.format(right_tr,
+                                                                       words[0], words[1], words[2], words[3])
 
         await Form.GameIsActive.set()
         await message.answer(text)
         await state.update_data(rightAns=right[0])
 
 
-
-
-
 @dp.message_handler(state=Form.GameIsActive)
 async def GameInProcess(message: types.Message, state: FSMContext):
+
     data = await state.get_data()
     finAns = data.get('rightAns')
-    if message.text == finAns:
+
+    if message.text.lower() == finAns:
         await message.answer('Ура, победа')
         await state.finish()
     else:
-        await message.answer('ПОРАЖЕНИЕ')
-
-
-
-
+        await message.answer('Поражение')
 
 
 @dp.message_handler(commands=["user_add"])
