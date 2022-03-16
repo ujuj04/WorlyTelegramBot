@@ -5,6 +5,7 @@ from pymongo import MongoClient
 import translation
 import functional
 from random import randint
+import random
 
 from aiogram import Bot, Dispatcher, executor, types
 
@@ -45,7 +46,7 @@ class Database():
 db = Database()
 
 
-class WordyGuesser():
+class WordyGuesser:
     def __init__(self, game):
 
         self.game = game
@@ -67,7 +68,6 @@ class WordyGuesser():
 
         for index in indexs:
             words.append(db.words.find_one({"index": index})["word"])
-
         return words
 
 
@@ -82,9 +82,7 @@ async def create_game(message: types.Message):
         "rounds": int(attr[1]),
         "timer": int(attr[2])
     }
-
     _game = WordyGuesser(game)
-
     rounds = game["rounds"]
     timer = game["timer"]
 
@@ -94,18 +92,13 @@ async def create_game(message: types.Message):
         rounds -= 1
         reply = False
 
+        words = [right[0], wrongs[0], wrongs[1], wrongs[2]]
+        random.shuffle(words)
+        text = '\t1. {} \n\t2. {} \n\t3. {} \n\t4. {}'.format(words[0], words[1], words[2], words[3])
+
+        await message.answer(text)
+
         while not reply:
-
-            @dp.message_handler()
-            async def check_reply(message: types.Message):
-                global reply
-
-                if message.text == right[0]:
-                    reply = True
-                    await message.answer('Huuray')
-
-                else:
-                    await message.answer('-_-')
 
 
 @dp.message_handler(commands=["user_add"])
