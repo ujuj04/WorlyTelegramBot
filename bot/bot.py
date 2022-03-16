@@ -6,16 +6,18 @@ import translation
 import functional
 from random import randint
 import random
-
+from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram import Bot, Dispatcher, executor, types
+from aiogram.contrib.fsm_storage.memory import MemoryStorage
+from aiogram.dispatcher import FSMContext
 
 #log level
 logging.basicConfig(level=logging.INFO)
 
 #bot init
 bot = Bot(token=config.TOKEN)
-dp = Dispatcher(bot)
-
+storage = MemoryStorage()
+dp = Dispatcher(bot, storage=storage)
 
 class Database():
     def __init__(self):
@@ -46,6 +48,12 @@ class Database():
 db = Database()
 
 
+
+class Form(StatesGroup):
+    GameIsActive = State()  # Will be represented in storage as 'Form:name'
+    age = State()  # Will be represented in storage as 'Form:age'
+    gender = State()  # Will be represented in storage as 'Form:gender'
+
 class WordyGuesser:
     def __init__(self, game):
 
@@ -72,7 +80,7 @@ class WordyGuesser:
 
 
 @dp.message_handler(commands=["c_game"])
-async def create_game(message: types.Message):
+async def create_game(message: types.Message, state: FSMContext):
     attr = message.text.split()
 
     if attr.__len__() < 3 or not attr[2].isdigit():
@@ -93,12 +101,31 @@ async def create_game(message: types.Message):
         reply = False
 
         words = [right[0], wrongs[0], wrongs[1], wrongs[2]]
+        await message.answer(right[0])
         random.shuffle(words)
-        text = '\t1. {} \n\t2. {} \n\t3. {} \n\t4. {}'.format(words[0], words[1], words[2], words[3])
+        text = '1. {}\n2. {}\n3. {}\n4. {}'.format(words[0], words[1], words[2], words[3])
 
+        await Form.GameIsActive.set()
         await message.answer(text)
+        await state.update_data(rightAns=right[0])
 
-        while not reply:
+
+
+
+
+@dp.message_handler(state=Form.GameIsActive)
+async def GameInProcess(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    finAns = data.get('rightAns')
+    if message.text == finAns:
+        await message.answer('Ура, победа')
+        await state.finish()
+    else:
+        await message.answer('ПОРАЖЕНИЕ')
+
+
+
+
 
 
 @dp.message_handler(commands=["user_add"])
