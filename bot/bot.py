@@ -19,6 +19,7 @@ bot = Bot(token=config.TOKEN)
 storage = MemoryStorage()
 dp = Dispatcher(bot, storage=storage)
 
+
 class Database():
     def __init__(self):
         cluster = MongoClient(
@@ -48,11 +49,11 @@ class Database():
 db = Database()
 
 
-
 class Form(StatesGroup):
     GameIsActive = State()  # Will be represented in storage as 'Form:name'
     age = State()  # Will be represented in storage as 'Form:age'
     gender = State()  # Will be represented in storage as 'Form:gender'
+
 
 class WordyGuesser:
     def __init__(self, game):
