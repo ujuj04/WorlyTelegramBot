@@ -32,7 +32,7 @@ class Database():
         user = self.users.find_one({"chat_id": chat_id})
 
         if user is not None:
-            return "User is already added"
+            return "Пользователь уже зарегестрирован"
 
         user = {
             "user_id": chat_id,
@@ -42,7 +42,7 @@ class Database():
 
         self.users.insert_one(user)
 
-        return "User added"
+        return "Пользователь зарегестрирован"
 
 
 db = Database()
@@ -50,9 +50,8 @@ db = Database()
 
 
 class Form(StatesGroup):
-    GameIsActive = State()  # Will be represented in storage as 'Form:name'
-    age = State()  # Will be represented in storage as 'Form:age'
-    gender = State()  # Will be represented in storage as 'Form:gender'
+    GameIsActive = State()  # Используются для подключения к проверке ответа
+    GameIsGoing = State()  # Возвращает из обработки ответа обратно в принт слов
 
 class WordyGuesser:
     def __init__(self, game):
@@ -79,7 +78,7 @@ class WordyGuesser:
         return words
 
 
-@dp.message_handler(commands=["c_game"])
+@dp.message_handler(commands=["g"])
 async def create_game(message: types.Message, state: FSMContext):
     attr = message.text.split()
 
@@ -93,21 +92,29 @@ async def create_game(message: types.Message, state: FSMContext):
     _game = WordyGuesser(game)
     rounds = game["rounds"]
     timer = game["timer"]
+    rounds -= 1
+    await state.update_data(roundsNum=rounds)
+    await Form.GameIsGoing.set()
+    await message.answer('Напишите ready, если готовы начать игру.')
 
-    while rounds > 0:
 
-        right, wrongs = WordyGuesser.generateReply()
-        rounds -= 1
-        reply = False
 
-        words = [right[0], wrongs[0], wrongs[1], wrongs[2]]
-        await message.answer(right[0])
-        random.shuffle(words)
-        text = '1. {}\n2. {}\n3. {}\n4. {}'.format(words[0], words[1], words[2], words[3])
+@dp.message_handler(state=Form.GameIsGoing)
+async def PrintWords(message: types.Message, state: FSMContext):
 
-        await Form.GameIsActive.set()
-        await message.answer(text)
-        await state.update_data(rightAns=right[0])
+    right, wrongs = WordyGuesser.generateReply()
+
+    words = [right[0], wrongs[0], wrongs[1], wrongs[2]]
+    await message.answer(translation.start(right[0]).replace(';', ','))
+    random.shuffle(words)
+    text = '1. {}\n2. {}\n3. {}\n4. {}'.format(words[0], words[1], words[2], words[3])
+
+    await message.answer(text)
+    await state.update_data(rightAns=right[0])
+    data = await state.get_data()
+    rounds = data.get('roundsNum')
+    await Form.GameIsActive.set()
+
 
 
 
@@ -115,12 +122,24 @@ async def create_game(message: types.Message, state: FSMContext):
 
 @dp.message_handler(state=Form.GameIsActive)
 async def GameInProcess(message: types.Message, state: FSMContext):
+
     data = await state.get_data()
     finAns = data.get('rightAns')
-    if message.text == finAns:
-        await message.answer('Ура, победа')
+    rounds = data.get('roundsNum')
+    if message.text == finAns and rounds == 0:
+        await message.answer('Первым ответил пользователь: ....., Он получает 1 очко!')
+        user = db.users.find_one({"user_id": message.from_user.id})
+        db.users.update_one({"user_id": message.from_user.id}, {"$set": {"points": user["points"] + 1}})
+        await message.answer('Игра окончена!!!')
         await state.finish()
-    else:
+    if message.text == finAns and rounds != 0:
+        await message.answer('Первым ответил пользователь: ....., Он получает 1 очко!\n\nНапишите ready, если готовы продолжить игру')
+        user = db.users.find_one({"user_id": message.from_user.id})
+        db.users.update_one({"user_id": message.from_user.id}, {"$set": {"points": user["points"] + 1}})
+        rounds -= 1
+        await state.update_data(roundsNum=rounds)
+        await Form.GameIsGoing.set()
+    elif message.text != finAns:
         await message.answer('ПОРАЖЕНИЕ')
 
 
@@ -133,11 +152,28 @@ async def user_add(message: types.Message):
     chat_id = message["from"]["id"]
     await message.answer(Database.user_add(db, chat_id))
 
+@dp.message_handler(commands=["set_nickname"])
+async def user_add(message: types.Message):
+    nick = message.text.split()[1]
+    db.users.update_one({"user_id": message.from_user.id}, {"$set": {"nickname": nick}})
+    await message.answer('Никнейм изменен')
 
-@dp.message_handler(commands=["tr"])
+@dp.message_handler(commands=["trEn"])
 async def translate(message: types.Message):
     word = message.text.split()[1]
     await message.answer(translation.start(word))
+
+
+
+@dp.message_handler(commands=["start"])
+async def greetings(message: types.Message):
+    await message.answer('Привет, меня зовут Worly! \nЯ пытаюсь сделать изучение иностранных языков легким и '
+                         'интересным.'
+                         ' \n\nВот, что я могу: \n/trEn - я переведу любое слово с английского на русский '
+                         '\nПример ввода: /trEn walk \n\n/trRu - я переведу любое слово с русского на английский '
+                         '\nПример ввода: /trRu ходить \n\n/g - начнется игра, в которую ты можешь играть один или с '
+                         'друзьями '
+                         '(чтобы играть с друзьями, добавь меня в любой чат!)')
 
 
 #run long-polling
