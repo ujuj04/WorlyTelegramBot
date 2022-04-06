@@ -3,7 +3,6 @@ import logging
 import pymongo
 from pymongo import MongoClient
 import translation
-import functional
 from random import randint
 import random
 from aiogram.dispatcher.filters.state import State, StatesGroup
@@ -172,42 +171,44 @@ async def user_add(message: types.Message):
 @dp.message_handler(commands=["trEn"])
 async def translate(message: types.Message):
     word = message.text.split()[1]
-    await message.reply(translation.start(word=word, srcLang=1033, dstLang=1049))
+    await message.reply(translation.start(word=word, srcLang=1033, dstLang=1049).replace(';', ','))
 
 
 @dp.message_handler(commands=["trRu"])
 async def translate(message: types.Message):
     word = message.text.split()[1]
-    await message.reply(translation.start(word=word, srcLang=1049, dstLang=1033))
+    await message.reply(translation.start(word=word, srcLang=1049, dstLang=1033).replace(';', ','))
 
 
 @dp.message_handler(commands=["profile"])
 async def print_points(message: types.Message):
     user = db.users.find_one({"user_id": message.from_user.id})
-    await message.reply('Твой никнейм: {}'
-                        '\nТвой user id: {}'
-                        '\nКоличество очков: {}'.format(user['nickname'], user['user_id'], user['points']))
+    await message.reply('Твои пользователькие данные:'
+                        '\n\n\U0001F58A   Никнейм: {}'
+                        '\n\n\U0001F464   User id: {}'
+                        '\n\n\U0001FA99   Количество очков: {} '.format(user['nickname'], user['user_id'], user['points']))
 
 
 @dp.message_handler(commands=["leaderboards"])
 async def print_leaders(message: types.Message):
+    print(message)
     users = db.users.find({})
-    leaders = [('...', 0),
-               ('....', 0),
-               ('.....', 0)]
+    leaders = [('.  .  .  .  .', 0),
+               ('.  .  .  .  .', 0),
+               ('.  .  .  .  .', 0)]
     for user in users:
         user_points = user['points']
         if user_points > leaders[0][1]:
             leaders[0] = [user['nickname'], user_points]
         leaders.sort(key=lambda user: user[1])
-    print(leaders)
-
     await message.answer('Таблица лидеров:\n\n'
                         '\U0001F947 {} - {} очков \n\n'
                         '\U0001F948 {} - {} очков\n\n'
-                        '\U0001F949 {} - {} очков'.format(leaders[2][0], leaders[2][1],
+                        '\U0001F949 {} - {} очков'
+                        '\n\n Играй и зарабатывай очки, чтобы попасть в лидеры.'.format(leaders[2][0], leaders[2][1],
                                            leaders[1][0], leaders[1][1],
                                            leaders[0][0], leaders[0][1]))
+
 
 @dp.message_handler(commands=["start"])
 async def greetings(message: types.Message):
