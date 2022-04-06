@@ -94,8 +94,8 @@ async def create_game(message: types.Message, state: FSMContext):
     await state.update_data(roundsNum=rounds)
     await Form.GameIsGoing.set()
     await message.answer('Мы напишем тебе слово на русском и 4 варианта ответа на английском.'
-                         '\nТвоя задача определить, какой из вариантов ответа является правильным переводом.'
-                         '\nЧтобы ответить, напиши это слово на английском.')
+                         '\n\nТвоя задача определить, какой из вариантов ответа является правильным переводом.'
+                         '\n\nЧтобы ответить, напиши это слово на английском.')
     await message.answer('Напиши ready, чтобы начать игру.')
 
 
@@ -132,7 +132,7 @@ async def GameInProcess(message: types.Message, state: FSMContext):
         else:
             nick = user["user_id"]
 
-        await message.answer('Ответ правильный!\n{} Ты получаешь 1 очко!\n\nИгра окончена!'.format(nick))
+        await message.answer('Ответ правильный!\n{} получает 1 очко \U0001F389\n\nИгра окончена!'.format(nick))
         await state.finish()
 
     if message.text == finAns and rounds != 0:
@@ -145,8 +145,8 @@ async def GameInProcess(message: types.Message, state: FSMContext):
         else:
             nick = user["user_id"]
 
-        await message.answer('Ответ правильный!\n{} получает 1 очко!\n\n'
-                             'Напиши ready, чтобы продолжить'.format(nick))
+        await message.answer('Ответ правильный!\n{} получает 1 очко \U0001F389\n\n'
+                             'Напиши ready, чтобы продолжить.'.format(nick))
         await state.update_data(roundsNum=rounds)
         await Form.GameIsGoing.set()
 
@@ -212,7 +212,7 @@ async def print_leaders(message: types.Message):
 
 @dp.message_handler(commands=["start"])
 async def greetings(message: types.Message):
-    await message.answer('Привет, меня зовут Worly!'
+    await message.answer('Привет, меня зовут Worly \U0001F44B'
                          '\nЯ пытаюсь сделать изучение иностранных языков легким и интересным.'
                          '\n\nДля начала давай зарегестрируем тебя:'
                          '\n\nНапиши /user_add - и мы добавим тебя в нашу систему.'
