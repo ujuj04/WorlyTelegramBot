@@ -168,13 +168,13 @@ async def user_add(message: types.Message):
     await message.answer('Никнейм изменен')
 
 
-@dp.message_handler(commands=["trEn"])
+@dp.message_handler(commands=["tr_en"])
 async def translate(message: types.Message):
     word = message.text.split()[1]
     await message.reply(translation.start(word=word, srcLang=1033, dstLang=1049).replace(';', ','))
 
 
-@dp.message_handler(commands=["trRu"])
+@dp.message_handler(commands=["tr_ru"])
 async def translate(message: types.Message):
     word = message.text.split()[1]
     await message.reply(translation.start(word=word, srcLang=1049, dstLang=1033).replace(';', ','))
@@ -219,8 +219,8 @@ async def greetings(message: types.Message):
                          '\n\nНапиши /set_nickname и свое имя - тогда другие пользователи будут знать, как тебя зовут.'
                          '\nПример: /set_nickname Tim.'
                          '\n\n\nВот, что я могу:'
-                         '\n\n/tren - я переведу любое слово с английского на русский\nПример: /trEn walk.'
-                         '\n\n/trru - я переведу любое слово с русского на английский\nПример: /trRu ходить.'                        
+                         '\n\n/tr_en - я переведу любое слово с английского на русский\nПример: /trEn walk.'
+                         '\n\n/tr_ru - я переведу любое слово с русского на английский\nПример: /trRu ходить.'                        
                          '\n\n/game и количество раундов - начнется игра в слова.\nПример: /game 5'
                          '\n\n/profile - выведет твои пользовательские данные.'
                          '\n\n/leaderboards - выведет 3 пользователей, с самым большим количеством очков.'
