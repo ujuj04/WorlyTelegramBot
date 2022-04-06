@@ -29,14 +29,14 @@ class Database():
         self.users = self.db["Users"]
         self.words = self.db["WordsFinal"]
 
-    def user_add(self, chat_id):
-        user = self.users.find_one({"chat_id": chat_id})
+    def user_add(self, user_id):
+        user = self.users.find_one({"user_id": user_id})
 
         if user is not None:
             return "Пользователь уже зарегестрирован"
 
         user = {
-            "user_id": chat_id,
+            "user_id": user_id,
             "nickname": "Noname",
             "points": 0
         }
@@ -78,7 +78,7 @@ class WordyGuesser:
         return words
 
 
-@dp.message_handler(commands=["g"])
+@dp.message_handler(commands=["game"])
 async def create_game(message: types.Message, state: FSMContext):
     attr = message.text.split()
 
@@ -91,10 +91,13 @@ async def create_game(message: types.Message, state: FSMContext):
 
     _game = WordyGuesser(game)
     rounds = game["rounds"]
-
+    rounds -= 1
     await state.update_data(roundsNum=rounds)
     await Form.GameIsGoing.set()
-    await message.answer('Напишите ready, если готовы начать игру.')
+    await message.answer('Мы напишем тебе слово на русском и 4 варианта ответа на английском.'
+                         '\nТвоя задача определить, какой из вариантов ответа является правильным переводом.'
+                         '\nЧтобы ответить, напиши это слово на английском.')
+    await message.answer('Напиши ready, чтобы начать игру.')
 
 
 @dp.message_handler(state=Form.GameIsGoing)
@@ -130,7 +133,7 @@ async def GameInProcess(message: types.Message, state: FSMContext):
         else:
             nick = user["user_id"]
 
-        await message.answer('Первым ответил пользователь: {}\nОн получает 1 очко!\nИгра окончена!'.format(nick))
+        await message.answer('Ответ правильный!\n{} Ты получаешь 1 очко!\n\nИгра окончена!'.format(nick))
         await state.finish()
 
     if message.text == finAns and rounds != 0:
@@ -143,14 +146,14 @@ async def GameInProcess(message: types.Message, state: FSMContext):
         else:
             nick = user["user_id"]
 
-        await message.answer('Первым ответил пользователь: {}\nОн получает 1 очко!\n\n'
-                             'Напишите ready, если готовы продолжить'.format(nick))
+        await message.answer('Ответ правильный!\n{} получает 1 очко!\n\n'
+                             'Напиши ready, чтобы продолжить'.format(nick))
         await state.update_data(roundsNum=rounds)
         await Form.GameIsGoing.set()
 
     elif message.text != finAns:
 
-        await message.answer('ПОРАЖЕНИЕ')
+        await message.answer('Неверный ответ, попробуй еще раз.')
 
 
 @dp.message_handler(commands=["user_add"])
@@ -178,17 +181,48 @@ async def translate(message: types.Message):
     await message.reply(translation.start(word=word, srcLang=1049, dstLang=1033))
 
 
+@dp.message_handler(commands=["profile"])
+async def print_points(message: types.Message):
+    user = db.users.find_one({"user_id": message.from_user.id})
+    await message.reply('Твой никнейм: {}'
+                        '\nТвой user id: {}'
+                        '\nКоличество очков: {}'.format(user['nickname'], user['user_id'], user['points']))
+
+
+@dp.message_handler(commands=["leaderboards"])
+async def print_leaders(message: types.Message):
+    users = db.users.find({})
+    leaders = [('...', 0),
+               ('....', 0),
+               ('.....', 0)]
+    for user in users:
+        user_points = user['points']
+        if user_points > leaders[0][1]:
+            leaders[0] = [user['nickname'], user_points]
+        leaders.sort(key=lambda user: user[1])
+    print(leaders)
+
+    await message.answer('Таблица лидеров:\n\n'
+                        '\U0001F947 {} - {} очков \n\n'
+                        '\U0001F948 {} - {} очков\n\n'
+                        '\U0001F949 {} - {} очков'.format(leaders[2][0], leaders[2][1],
+                                           leaders[1][0], leaders[1][1],
+                                           leaders[0][0], leaders[0][1]))
+
 @dp.message_handler(commands=["start"])
 async def greetings(message: types.Message):
     await message.answer('Привет, меня зовут Worly!'
                          '\nЯ пытаюсь сделать изучение иностранных языков легким и интересным.'
-                         '\n\nВот, что я могу:'
-                         '\n\n/user_add - регистрирует пользователя'
-                         '\n\n/trEn - я переведу любое слово с английского на русский\nПример ввода: /trEn walk'
-                         '\n\n/trRu - я переведу любое слово с русского на английский\nПример ввода: /trRu ходить'                        
-                         '\n\n/set_nickname - задает ваш ник\nПример ввода: /set_nickname Tim'
-                         '\n\n/g - начнется игра, в которую ты можешь играть один или с друзьями'
-                         '\n(чтобы играть с друзьями, добавь меня в любой чат!)')
+                         '\n\nДля начала давай зарегестрируем тебя:'
+                         '\n\nНапиши /user_add - и мы добавим тебя в нашу систему.'
+                         '\n\nНапиши /set_nickname и свое имя - тогда другие пользователи будут знать, кто ты.'
+                         '\nПример: /set_nickname Tim.'
+                         '\n\n\nВот, что я могу:'
+                         '\n\n/trEn - я переведу любое слово с английского на русский\nПример: /trEn walk.'
+                         '\n\n/trRu - я переведу любое слово с русского на английский\nПример: /trRu ходить.'                        
+                         '\n\n/game и количество раундов - начнется игра в слова.\nПример: /game 5'
+                         '\n\n/profile - выведет твои пользовательские данные'
+                         '\n\n(P.S. Ты можешь добавь меня в любой чат и соревноваться с друзьями!)')
 
 #run long-polling
 if __name__ == '__main__':
