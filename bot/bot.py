@@ -44,6 +44,16 @@ class Database():
 
         return "Пользователь зарегестрирован"
 
+    def user_del(self, user_id):
+        user = self.users.find_one({"user_id": user_id})
+
+        if user is not None:
+            db.users.find_one_and_delete({"user_id": user_id})
+            return "Пользователь удален"
+
+        else:
+            return "Пользователь не найден"
+
 
 db = Database()
 
@@ -136,6 +146,7 @@ async def GameInProcess(message: types.Message, state: FSMContext):
         await state.finish()
 
     if message.text == finAns and rounds != 0:
+
         user = db.users.find_one({"user_id": message.from_user.id})
         db.users.update_one({"user_id": message.from_user.id}, {"$set": {"points": user["points"] + 1}})
         rounds -= 1
@@ -157,66 +168,101 @@ async def GameInProcess(message: types.Message, state: FSMContext):
 
 @dp.message_handler(commands=["user_add"])
 async def user_add(message: types.Message):
-    chat_id = message["from"]["id"]
-    await message.answer(Database.user_add(db, chat_id))
+    user_id = message["from"]["id"]
+    await message.answer(Database.user_add(db, user_id))
+
+
+@dp.message_handler(commands=["user_del"])
+async def user_add(message: types.Message):
+    user_id = message["from"]["id"]
+    await message.answer(Database.user_del(db, user_id))
 
 
 @dp.message_handler(commands=["set_nickname"])
 async def user_add(message: types.Message):
-    nick = message.text.split()[1]
-    db.users.update_one({"user_id": message.from_user.id}, {"$set": {"nickname": nick}})
-    await message.answer('Никнейм изменен')
+
+    text = message.text.split()
+
+    if len(text) > 1 and text[1] is not None:
+        nick = text[1]
+
+        db.users.update_one({"user_id": message.from_user.id}, {"$set": {"nickname": nick}})
+        await message.answer('Никнейм изменен')
+
+    else:
+        await message.answer('После команды введи никнейм, который ты хочешь иметь. Следуй примерам!')
 
 
 @dp.message_handler(commands=["tr_en"])
 async def translate(message: types.Message):
+
     text = message.text.split()
+
     if len(text) > 1 and text[1] is not None:
         word = text[1]
+
         translated = translation.start(word=word, srcLang=1033, dstLang=1049).replace(';', ',')
         if translated != 'Error!404':
             await message.reply(translated)
         else:
             await message.reply('Я пока что не знаю этого слова.')
+
     else:
         await message.answer('После команды введи слово, которое ты хочешь перевести. Следуй примерам!')
 
 
 @dp.message_handler(commands=["tr_ru"])
 async def translate(message: types.Message):
+
     text = message.text.split()
+
     if len(text) > 1 and text[1] is not None:
         word = text[1]
+
         translated = translation.start(word=word, srcLang=1049, dstLang=1033).replace(';', ',')
         if translated != 'Error!404':
             await message.reply(translated)
         else:
             await message.reply('Я пока что не знаю этого слова.')
+
     else:
         await message.answer('После команды введи слово, которое ты хочешь перевести. Следуй примерам!')
 
 
 @dp.message_handler(commands=["profile"])
 async def print_points(message: types.Message):
+
     user = db.users.find_one({"user_id": message.from_user.id})
-    await message.reply('Твои пользователькие данные:'
-                        '\n\n\U0001F58A   Никнейм: {}'
-                        '\n\n\U0001F464   User id: {}'
-                        '\n\n\U0001FA99   Количество очков: {} '.format(user['nickname'], user['user_id'], user['points']))
+
+    if user is not None:
+        await message.reply('Твои пользователькие данные:'
+                            '\n\n\U0001F58A   Никнейм: {}'
+                            '\n\n\U0001F464   User id: {}'
+                            '\n\n\U0001FA99   Количество очков: {} '.format(user['nickname'],
+                                                                            user['user_id'],
+                                                                            user['points']))
+
+    else:
+        await message.answer('Пользователь не зарегестрирован!\n'
+                             'Напиши /user_add, чтобы добавить пользователя.')
 
 
 @dp.message_handler(commands=["leaderboards"])
 async def print_leaders(message: types.Message):
-    print(message)
+
     users = db.users.find({})
     leaders = [('.  .  .  .  .', 0),
                ('.  .  .  .  .', 0),
                ('.  .  .  .  .', 0)]
+
     for user in users:
         user_points = user['points']
+
         if user_points > leaders[0][1]:
             leaders[0] = [user['nickname'], user_points]
+
         leaders.sort(key=lambda user: user[1])
+
     await message.answer('Таблица лидеров:\n\n'
                         '\U0001F947 {} - {} очков \n\n'
                         '\U0001F948 {} - {} очков\n\n'
@@ -232,6 +278,7 @@ async def greetings(message: types.Message):
                          '\nЯ пытаюсь сделать изучение иностранных языков легким и интересным.'
                          '\n\nДля начала давай зарегестрируем тебя:'
                          '\n\nНапиши /user_add - и мы добавим тебя в нашу систему.'
+                         '\n\nНапиши /user_del - и твой аккаунт будет удален.'
                          '\n\nНапиши /set_nickname и свое имя - тогда другие пользователи будут знать, как тебя зовут.'
                          '\nПример: /set_nickname Tim.'
                          '\n\n\nВот, что я могу:'
